@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysFinance - Gestão Pessoal</title>
+    
+    <!-- FontAwesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js para Gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ==========================================
+           VARIÁVEIS DE TEMA (LIGHT / DARK)
+           ========================================== */
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-hypersensorial: 0 25px 50px -12px rgba(37, 99, 235, 0.35), 0 0 30px rgba(37, 99, 235, 0.15);
+            --shadow-hover-panel: 0 20px 30px -10px rgba(37, 99, 235, 0.2);
+            --chart-text: #374151;
+        }
+
+        [data-theme="dark"] {
+            --primary: #3b82f6;
+            --primary-hover: #60a5fa;
+            --bg-body: #111827;
+            --bg-card: #1f2937;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --border: #374151;
+            --success: #34d399;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            --shadow-hypersensorial: 0 25px 50px -12px rgba(59, 130, 246, 0.5), 0 0 35px rgba(59, 130, 246, 0.25);
+            --shadow-hover-panel: 0 20px 30px -10px rgba(59, 130, 246, 0.3);
+            --chart-text: #d1d5db;
+        }
+
+        /* ==========================================
+           RESET E ESTILOS GERAIS (HIPERSENSORIAL)
+           ========================================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); transition: background-color 0.4s, color 0.4s; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+        /* ==========================================
+           CABEÇALHO (HEADER)
+           ========================================== */
+        header {
+            background: var(--bg-card); padding: 15px 30px; border-radius: 14px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: var(--shadow); border: 1px solid var(--border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        header:hover {
+            box-shadow: var(--shadow-hover-panel);
+            transform: translateY(-2px);
+        }
+        header h1 { font-size: 22px; display: flex; align-items: center; gap: 10px; color: var(--primary); }
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+        
+        .btn-icon {
+            background: transparent; border: 1px solid var(--border); color: var(--text-main);
+            padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; font-size: 16px;
+        }
+        .btn-icon:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: scale(1.05); }
+
+        /* ==========================================
+           DASHBOARD CARDS (HIPERSENSORIAL ZUMMM)
+           ========================================== */
+        .dashboard { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 20px; 
+            perspective: 1200px;
+        }
+        @media (max-width: 1024px) { .dashboard { grid-template-columns: 1fr; } }
+        
+        .card {
+            background: var(--bg-card); padding: 22px; border-radius: 16px;
+            border: 2px solid var(--border); box-shadow: var(--shadow);
+            display: flex; flex-direction: column; gap: 15px; cursor: pointer;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.5s ease, border-color 0.3s ease;
+            position: relative; overflow: hidden;
+            transform-origin: center center;
+            grid-column: span 1;
+        }
+
+        .card:hover {
+            border-color: var(--primary);
+            transform: translateY(-6px) scale(1.03);
+            box-shadow: var(--shadow-hover-panel);
+        }
+
+        .card.expanded {
+            grid-column: 1 / -1 !important;
+            border-color: var(--primary);
+            box-shadow: var(--shadow-hypersensorial);
+            background: linear-gradient(145deg, var(--bg-card) 0%, var(--bg-body) 100%);
+            transform: scale(1.02) translateY(-2px);
+            z-index: 50;
+        }
+
+        .card-main-content {
+            display: flex; align-items: center; gap: 15px; width: 100%;
+        }
+
+        .card-icon {
+            width: 55px; height: 55px; border-radius: 50%; display: flex;
+            justify-content: center; align-items: center; font-size: 26px; color: white;
+            flex-shrink: 0; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .card:hover .card-icon { transform: scale(1.18) rotate(8deg); }
+        .card.expanded .card-icon { transform: scale(1.25); }
+
+        .card-icon.saldo { background: var(--primary); }
+        .card-icon.entrada { background: var(--success); }
+        .card-icon.saida { background: var(--danger); }
+
+        .card-info { flex-grow: 1; }
+        .card-info h3 { font-size: 13px; color: var(--text-muted); text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px; }
+        .card-info h3 i { font-size: 14px; transition: transform 0.4s ease; }
+        .card.expanded .card-info h3 i { transform: rotate(180deg); color: var(--primary); }
+        
+        .card-info .value { font-size: 28px; font-weight: 800; margin-top: 5px; transition: font-size 0.3s; }
+        .card.expanded .card-info .value { font-size: 34px; color: var(--primary); }
+        .card-info .value.negative { color: var(--danger); }
+
+        /* Gaveta do Card Expansível */
+        .card-chart-drawer {
+            max-height: 0; opacity: 0; overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, padding 0.4s ease;
+            display: flex; flex-direction: column; gap: 10px; border-top: 1px dashed transparent;
+        }
+        .card.expanded .card-chart-drawer {
+            max-height: 350px; opacity: 1; border-top-color: var(--border); padding-top: 15px;
+        }
+        .drawer-canvas-container { position: relative; height: 240px; width: 100%; }
+
+        /* ==========================================
+           ÁREA DE GRÁFICOS E FORMULÁRIO (ZUMMM NO HOVER)
+           ========================================== */
+        .middle-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .middle-section { grid-template-columns: 1fr; } }
+
+        .panel { 
+            background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border); 
+            box-shadow: var(--shadow); padding: 22px; 
+            /* Efeito ZUMMM hipersensorial ao passar o mouse */
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.4s ease, border-color 0.3s ease;
+        }
+        .panel:hover {
+            transform: translateY(-6px) scale(1.015);
+            box-shadow: var(--shadow-hover-panel);
+            border-color: var(--primary);
+        }
+
+        .panel h2 { font-size: 16px; margin-bottom: 20px; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; align-items: center; gap: 10px;}
+
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .chart-container { position: relative; height: 200px; width: 100%; transition: transform 0.3s ease; }
+        .chart-container:hover { transform: scale(1.03); }
+
+        /* Formulário */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group.full { grid-column: 1 / -1; }
+        .form-group.actions-group { display: flex; flex-direction: row; gap: 10px; }
+        .form-group label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .form-group input, .form-group select {
+            padding: 10px; border: 1px solid var(--border); border-radius: 8px;
+            background: var(--bg-body); color: var(--text-main); font-size: 14px; outline: none; transition: all 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+
+        /* Botões */
+        .btn {
+            padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer;
+            font-weight: 600; font-size: 14px; transition: all 0.25s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
+        .btn-primary { background: var(--primary); color: white; flex: 1; }
+        .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .btn-secondary { background: var(--text-muted); color: white; }
+        .btn-export { background: var(--bg-body); border: 1px solid var(--border); color: var(--text-main); font-size: 13px; }
+        .btn-export:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-action { padding: 6px 10px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; transition: transform 0.2s; }
+        .btn-action:hover { transform: scale(1.1); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+
+        /* ==========================================
+           TABELA HIPERSENSORIAL
+           ========================================== */
+        .table-panel { overflow: hidden; }
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+        th { font-size: 12px; text-transform: uppercase; color: var(--text-muted); background: var(--bg-body); }
+        tr { transition: background-color 0.2s ease, transform 0.2s ease; }
+        tr:hover { background: var(--bg-body); }
+        
+        .action-cell { display: flex; gap: 8px; }
+
+        .badge { padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .badge.entrada { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .badge.saida { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        
+        .text-success { color: var(--success); font-weight: bold; }
+        .text-danger { color: var(--danger); font-weight: bold; }
+
+        @media print {
+            body { background: white; color: black; padding: 0; }
+            .container { max-width: 100%; }
+            .header-actions, .panel:not(.table-panel), .action-cell, .form-section { display: none !important; }
+            .table-panel { box-shadow: none; border: none; }
+            th, td { border: 1px solid #ddd; color: black; }
+            .card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+            .dashboard { display: flex; justify-content: space-between; margin-bottom: 20px; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Cabeçalho -->
+    <header>
+        <h1><i class="fa-solid fa-wallet"></i> Anote-Tudo</h1>
+        <div class="header-actions">
+            <button class="btn-icon" id="themeToggle" title="Alternar Tema"><i class="fa-solid fa-moon"></i></button>
+            <button class="btn-icon btn-export" id="btnExportPDF" title="Exportar para PDF"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+            <button class="btn-icon btn-export" id="btnExportExcel" title="Exportar para Excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
+        </div>
+    </header>
+
+    <!-- Dashboard com Cards Hipersensoriais -->
+    <section class="dashboard">
+        <!-- Card Saldo -->
+        <div class="card" data-card="saldo" onclick="AppFinance.toggleCard('saldo')">
+            <div class="card-main-content">
+                <div class="card-icon saldo"><i class="fa-solid fa-scale-balanced"></i></div>
+                <div class="card-info">
+                    <h3>Saldo Atual <i class="fa-solid fa-chevron-down"></i></h3>
+                    <div class="value" id="valSaldo">R$ 0,00</div>
+                </div>
+            </div>
+            <div class="card-chart-drawer">
+                <span style="font-size: 13px; color: var(--primary); font-weight: 700;"><i class="fa-solid fa-bolt"></i> Raio-X Hipersensorial: Evolução Temporal do Patrimônio</span>
+                <div class="drawer-canvas-container">
+                    <canvas id="drawerSaldoCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Entradas -->
+        <div class="card" data-card="entradas" onclick="AppFinance.toggleCard('entradas')">
+            <div class="card-main-content">
+                <div class="card-icon entrada"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                <div class="card-info">
+                    <h3>Total Entradas <i class="fa-solid fa-chevron-down"></i></h3>
+                    <div class="value" id="valEntradas">R$ 0,00</div>
+                </div>
+            </div>
+            <div class="card-chart-drawer">
+                <span style="font-size: 13px; color: var(--success); font-weight: 700;"><i class="fa-solid fa-bolt"></i> Raio-X Hipersensorial: Distribuição de Fontes de Renda</span>
+                <div class="drawer-canvas-container">
+                    <canvas id="drawerEntradasCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Saídas -->
+        <div class="card" data-card="saidas" onclick="AppFinance.toggleCard('saidas')">
+            <div class="card-main-content">
+                <div class="card-icon saida"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                <div class="card-info">
+                    <h3>Total Saídas <i class="fa-solid fa-chevron-down"></i></h3>
+                    <div class="value" id="valSaidas">R$ 0,00</div>
+                </div>
+            </div>
+            <div class="card-chart-drawer">
+                <span style="font-size: 13px; color: var(--danger); font-weight: 700;"><i class="fa-solid fa-bolt"></i> Raio-X Hipersensorial: Espectro de Maiores Despesas</span>
+                <div class="drawer-canvas-container">
+                    <canvas id="drawerSaidasCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Gráficos Globais e Formulário -->
+    <section class="middle-section">
+        <!-- Painel de Análise Visual com Efeito Zummm no Hover -->
+        <div class="panel">
+            <h2><i class="fa-solid fa-chart-pie"></i> Análise Visual</h2>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <canvas id="chartPizza"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartBarras"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel form-section">
+            <h2 id="formTitle"><i class="fa-solid fa-plus-circle"></i> Novo Lançamento</h2>
+            <form id="formLancamento" class="form-grid">
+                <input type="hidden" id="editId" value="">
+                
+                <div class="form-group">
+                    <label for="tipo">Tipo</label>
+                    <select id="tipo" required>
+                        <option value="entrada">Entrada (Renda)</option>
+                        <option value="saida">Saída (Despesa)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="data">Data</label>
+                    <input type="date" id="data" required>
+                </div>
+                <div class="form-group">
+                    <label for="categoria">Categoria</label>
+                    <select id="categoria" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="subcategoria">Descrição</label>
+                    <select id="subcategoria" required></select>
+                </div>
+                <div class="form-group full">
+                    <label for="valor">Valor (R$)</label>
+                    <input type="number" id="valor" step="0.01" min="0.01" placeholder="0,00" required>
+                </div>
+                <div class="form-group full actions-group">
+                    <button type="submit" id="btnSubmit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i> <span id="btnSubmitText">Salvar Lançamento</span>
+                    </button>
+                    <button type="button" id="btnCancelEdit" class="btn btn-secondary" style="display: none;">
+                        <i class="fa-solid fa-xmark"></i> Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Tabela -->
+    <section class="panel table-panel">
+        <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2><i class="fa-solid fa-list-check"></i> Histórico de Lançamentos</h2>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Categoria</th>
+                        <th>Descrição</th>
+                        <th>Valor</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script>
+/**
+ * ARQUITETURA DE MÓDULO ENCAPSULADA (Module Pattern)
+ */
+const AppFinance = (() => {
+
+    const CATEGORIAS_MAP = Object.freeze({
+        entrada: {
+            "Renda Fixa / CLT": ["Salário Líquido", "Salário Bruto", "13º Salário", "Férias", "Horas Extras"],
+            "MEI / Autônomo": ["Faturamento MEI", "Freelance", "Venda de Produtos", "Serviços Prestados"],
+            "Benefícios Sociais": ["Bolsa Família", "BPC (LOAS)", "Pé-de-Meia", "Auxílio Gás", "Outros Benefícios"],
+            "Aposentadoria / INSS": ["Aposentadoria", "Pensão por Morte", "Auxílio Doença"],
+            "Investimentos": ["Renda Variável", "CDB", "Dividendos", "Poupança"]
+        },
+        saida: {
+            "Moradia": ["Aluguel", "Financiamento Casa", "Financiamento AP", "IPTU", "Condomínio", "Luz", "Água", "Gás de Cozinha", "Internet Wi-Fi", "Outros (Moradia)"],
+            "Alimentação": ["Compras do Mês", "Compras da Semana", "Compras Quinzena", "Café da Manhã", "Lanche da Manhã", "Quentinha", "Lanche da Tarde", "Janta", "Outros (Alimentação)"],
+            "Lazer": ["Shopping", "Praia", "Cinema", "Teatro", "Show", "Viagem", "Barzinho / Pizzaria", "Churrascaria", "Fast Food", "Outros (Lazer)"],
+            "Boletos": ["Luz", "Água", "Internet", "Plano Telefone", "Plano Dados Móveis", "Escola / Faculdade", "Plano de Saúde", "Outros Boletos"],
+            "Fatura de Cartão": ["Cartão de Crédito Nacional", "Cartão de Crédito Internacional", "Plano Telefone", "Plano Dados Móveis", "Parcelamento de Fatura", "Anuidade", "Outros (Cartão)"],
+            "Investimento / Negócio": ["Produtos para Revenda", "Roupas", "Perfume", "Geladinho Gourmet", "Outros (Investimento)"],
+            "Estudos": ["Colégio", "Curso Técnico", "Faculdade", "Pós-Graduação", "Cursos Livres"],
+            "Pensão": ["Pensão Filho (1)", "Pensão Filhos (2 ou +)", "Pensão Ex-Esposa"],
+            "Saúde": ["Plano de Saúde", "Farmácia", "Consultas", "Dentista"],
+            "Outros": ["Cartão de Crédito", "Empréstimo", "Imprevistos", "Outros Gastos"]
+        }
+    });
+
+    const state = {
+        lancamentos: [],
+        charts: { pizza: null, barras: null, drawerSaldo: null, drawerEntradas: null, drawerSaidas: null },
+        expandedCard: null
+    };
+
+    let el = {};
+
+    const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y}`;
+    };
+
+    const getThemeColor = (varName) => getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+
+    const loadStorage = () => {
+        try {
+            const raw = localStorage.getItem('sysFinanceData');
+            state.lancamentos = raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            console.error("Erro ao carregar do localStorage", e);
+            state.lancamentos = [];
+        }
+    };
+
+    const saveData = () => localStorage.setItem('sysFinanceData', JSON.stringify(state.lancamentos));
+
+    const populateSelect = (selectEl, options, placeholder) => {
+        selectEl.innerHTML = `<option value="">${placeholder}</option>`;
+        options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            selectEl.appendChild(option);
+        });
+    };
+
+    const handleTipoChange = () => {
+        const tipo = el.tipo.value;
+        const categoriasDisponiveis = CATEGORIAS_MAP[tipo] ? Object.keys(CATEGORIAS_MAP[tipo]) : [];
+        
+        populateSelect(el.categoria, categoriasDisponiveis, "Selecione a Categoria...");
+        populateSelect(el.subcategoria, [], "Selecione a Categoria primeiro...");
+    };
+
+    const handleCategoriaChange = () => {
+        const tipo = el.tipo.value;
+        const cat = el.categoria.value;
+        const subcategoriasDisponiveis = (CATEGORIAS_MAP[tipo] && CATEGORIAS_MAP[tipo][cat]) ? CATEGORIAS_MAP[tipo][cat] : [];
+        
+        populateSelect(el.subcategoria, subcategoriasDisponiveis, "Selecione a Descrição...");
+    };
+
+    const resetFormState = () => {
+        el.form.reset();
+        el.editId.value = '';
+        el.formTitle.innerHTML = `<i class="fa-solid fa-plus-circle"></i> Novo Lançamento`;
+        el.btnSubmitText.textContent = 'Salvar Lançamento';
+        el.btnCancelEdit.style.display = 'none';
+        el.data.valueAsDate = new Date();
+        handleTipoChange();
+    };
+
+    const toggleCardExpansion = (cardName) => {
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(card => {
+            const name = card.getAttribute('data-card');
+            if (name === cardName) {
+                const isExpanded = card.classList.contains('expanded');
+                if (isExpanded) {
+                    card.classList.remove('expanded');
+                    state.expandedCard = null;
+                } else {
+                    card.classList.add('expanded');
+                    state.expandedCard = cardName;
+                    setTimeout(() => renderDrawerCharts(cardName), 250);
+                }
+            } else {
+                card.classList.remove('expanded');
+            }
+        });
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        const valParsed = parseFloat(el.valor.value);
+        if (isNaN(valParsed) || valParsed <= 0) return;
+
+        const isEditing = Boolean(el.editId.value);
+
+        if (isEditing) {
+            const targetId = el.editId.value;
+            const index = state.lancamentos.findIndex(l => l.id === targetId);
+            if (index !== -1) {
+                state.lancamentos[index] = {
+                    ...state.lancamentos[index],
+                    tipo: el.tipo.value,
+                    categoria: el.categoria.value,
+                    subcategoria: el.subcategoria.value,
+                    valor: valParsed,
+                    data: el.data.value
+                };
+            }
+        } else {
+            const novo = {
+                id: Date.now().toString(),
+                tipo: el.tipo.value,
+                categoria: el.categoria.value,
+                subcategoria: el.subcategoria.value,
+                valor: valParsed,
+                data: el.data.value
+            };
+            state.lancamentos.push(novo);
+        }
+
+        saveData();
+        render();
+        resetFormState();
+    };
+
+    const editLancamento = (id) => {
+        const item = state.lancamentos.find(l => l.id === id);
+        if (!item) return;
+
+        el.editId.value = item.id;
+        el.tipo.value = item.tipo;
+        
+        handleTipoChange();
+        el.categoria.value = item.categoria;
+        
+        handleCategoriaChange();
+        el.subcategoria.value = item.subcategoria;
+
+        el.data.value = item.data;
+        el.valor.value = item.valor;
+
+        el.formTitle.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editar Lançamento`;
+        el.btnSubmitText.textContent = 'Atualizar Lançamento';
+        el.btnCancelEdit.style.display = 'inline-flex';
+
+        window.scrollTo({ top: el.form.offsetTop - 50, behavior: 'smooth' });
+    };
+
+    const deleteLancamento = (id) => {
+        if (confirm('Deseja excluir este lançamento?')) {
+            state.lancamentos = state.lancamentos.filter(l => l.id !== id);
+            if (el.editId.value === id) {
+                resetFormState();
+            }
+            saveData();
+            render();
+        }
+    };
+
+    const calculateTotals = () => {
+        return state.lancamentos.reduce((acc, curr) => {
+            if (curr.tipo === 'entrada') acc.entradas += curr.valor;
+            else if (curr.tipo === 'saida') acc.saidas += curr.valor;
+            acc.saldo = acc.entradas - acc.saidas;
+            return acc;
+        }, { entradas: 0, saidas: 0, saldo: 0 });
+    };
+
+    const renderDashboard = () => {
+        const totals = calculateTotals();
+        el.valEntradas.textContent = formatCurrency(totals.entradas);
+        el.valSaidas.textContent = formatCurrency(totals.saidas);
+        el.valSaldo.textContent = formatCurrency(totals.saldo);
+        
+        if (totals.saldo < 0) el.valSaldo.classList.add('negative');
+        else el.valSaldo.classList.remove('negative');
+    };
+
+    const renderTable = () => {
+        el.tabela.innerHTML = '';
+        const sorted = [...state.lancamentos].sort((a, b) => new Date(b.data) - new Date(a.data));
+
+        if (sorted.length === 0) {
+            el.tabela.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);"><i class="fa-solid fa-inbox"></i> Nenhum lançamento registrado.</td></tr>`;
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        sorted.forEach(l => {
+            const tr = document.createElement('tr');
+            const isEntrada = l.tipo === 'entrada';
+            tr.innerHTML = `
+                <td>${formatDate(l.data)}</td>
+                <td><span class="badge ${l.tipo}">${isEntrada ? 'Entrada' : 'Saída'}</span></td>
+                <td>${l.categoria}</td>
+                <td>${l.subcategoria}</td>
+                <td class="${isEntrada ? 'text-success' : 'text-danger'}">${formatCurrency(l.valor)}</td>
+                <td>
+                    <div class="action-cell">
+                        <button class="btn-action btn-warning" onclick="AppFinance.edit('${l.id}')" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button class="btn-action btn-danger" onclick="AppFinance.delete('${l.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </td>
+            `;
+            fragment.appendChild(tr);
+        });
+
+        el.tabela.appendChild(fragment);
+    };
+
+    const renderCharts = () => {
+        const textColor = getThemeColor('--chart-text');
+        const borderColor = getThemeColor('--bg-card');
+        const totals = calculateTotals();
+
+        const gastosPorCat = {};
+        state.lancamentos.filter(l => l.tipo === 'saida').forEach(l => {
+            gastosPorCat[l.categoria] = (gastosPorCat[l.categoria] || 0) + l.valor;
+        });
+
+        if (state.charts.pizza) state.charts.pizza.destroy();
+        if (state.charts.barras) state.charts.barras.destroy();
+
+        const ctxPizza = document.getElementById('chartPizza').getContext('2d');
+        state.charts.pizza = new Chart(ctxPizza, {
+            type: 'doughnut',
+            data: {
+                labels: ['Entradas', 'Saídas'],
+                datasets: [{
+                    data: [totals.entradas, totals.saidas],
+                    backgroundColor: [getThemeColor('--success'), getThemeColor('--danger')],
+                    borderColor: borderColor,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: textColor } } }
+            }
+        });
+
+        const ctxBarras = document.getElementById('chartBarras').getContext('2d');
+        state.charts.barras = new Chart(ctxBarras, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(gastosPorCat),
+                datasets: [{
+                    label: 'Gastos (R$)',
+                    data: Object.values(gastosPorCat),
+                    backgroundColor: getThemeColor('--primary'),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: textColor }, grid: { display: false } },
+                    y: { ticks: { color: textColor }, grid: { color: borderColor } }
+                }
+            }
+        });
+
+        if (state.expandedCard) {
+            renderDrawerCharts(state.expandedCard);
+        }
+    };
+
+    const renderDrawerCharts = (cardName) => {
+        const textColor = getThemeColor('--chart-text');
+        const borderColor = getThemeColor('--border');
+
+        if (cardName === 'saldo') {
+            if (state.charts.drawerSaldo) state.charts.drawerSaldo.destroy();
+            const ctx = document.getElementById('drawerSaldoCanvas').getContext('2d');
+            
+            const historico = [...state.lancamentos].sort((a,b) => new Date(a.data) - new Date(b.data));
+            let acc = 0;
+            const labels = [];
+            const dataVal = [];
+            historico.forEach(l => {
+                acc += (l.tipo === 'entrada' ? l.valor : -l.valor);
+                labels.push(formatDate(l.data));
+                dataVal.push(acc);
+            });
+
+            state.charts.drawerSaldo = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length ? labels : ['Início'],
+                    datasets: [{
+                        label: 'Evolução do Saldo (R$)',
+                        data: dataVal.length ? dataVal : [0],
+                        borderColor: getThemeColor('--primary'),
+                        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+                        y: { ticks: { color: textColor, font: { size: 11 } }, grid: { color: borderColor } }
+                    }
+                }
+            });
+        }
+
+        if (cardName === 'entradas') {
+            if (state.charts.drawerEntradas) state.charts.drawerEntradas.destroy();
+            const ctx = document.getElementById('drawerEntradasCanvas').getContext('2d');
+            
+            const entradasPorCat = {};
+            state.lancamentos.filter(l => l.tipo === 'entrada').forEach(l => {
+                entradasPorCat[l.categoria] = (entradasPorCat[l.categoria] || 0) + l.valor;
+            });
+
+            state.charts.drawerEntradas = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(entradasPorCat),
+                    datasets: [{
+                        label: 'Entrada por Categoria',
+                        data: Object.values(entradasPorCat),
+                        backgroundColor: getThemeColor('--success'),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+                        y: { ticks: { color: textColor, font: { size: 11 } }, grid: { color: borderColor } }
+                    }
+                }
+            });
+        }
+
+        if (cardName === 'saidas') {
+            if (state.charts.drawerSaidas) state.charts.drawerSaidas.destroy();
+            const ctx = document.getElementById('drawerSaidasCanvas').getContext('2d');
+            
+            const saidasPorCat = {};
+            state.lancamentos.filter(l => l.tipo === 'saida').forEach(l => {
+                saidasPorCat[l.categoria] = (saidasPorCat[l.categoria] || 0) + l.valor;
+            });
+
+            state.charts.drawerSaidas = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: Object.keys(saidasPorCat).length ? Object.keys(saidasPorCat) : ['Sem dados'],
+                    datasets: [{
+                        label: 'Espectro de Saídas',
+                        data: Object.values(saidasPorCat).length ? Object.values(saidasPorCat) : [0],
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#ef4444'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        r: {
+                            grid: { color: borderColor },
+                            ticks: { color: textColor, backdropColor: 'transparent', font: { size: 10 } },
+                            pointLabels: { color: textColor, font: { size: 11, weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+        }
+    };
+
+    const render = () => {
+        renderDashboard();
+        renderTable();
+        renderCharts();
+    };
+
+    const initTheme = () => {
+        const savedTheme = localStorage.getItem('sysTheme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+    };
+
+    const toggleTheme = () => {
+        const current = document.documentElement.setAttribute('data-theme');
+        const next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('sysTheme', next);
+        updateThemeIcon(next);
+        renderCharts();
+    };
+
+    const updateThemeIcon = (theme) => {
+        el.themeToggle.innerHTML = theme === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+    };
+
+    const exportPDF = () => window.print();
+
+    const exportExcel = () => {
+        if (state.lancamentos.length === 0) {
+            alert("Não há dados para exportar.");
+            return;
+        }
+
+        let csvContent = "Data;Tipo;Categoria;Descrição;Valor (R$)\n";
+        state.lancamentos.forEach(l => {
+            const valorFormatado = Number(l.valor).toFixed(2).replace('.', ',');
+            csvContent += `${formatDate(l.data)};${l.tipo};${l.categoria};${l.subcategoria};${valorFormatado}\n`;
+        });
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `financas_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const init = () => {
+        el = {
+            form: document.getElementById('formLancamento'),
+            editId: document.getElementById('editId'),
+            formTitle: document.getElementById('formTitle'),
+            btnSubmitText: document.getElementById('btnSubmitText'),
+            btnCancelEdit: document.getElementById('btnCancelEdit'),
+            tipo: document.getElementById('tipo'),
+            categoria: document.getElementById('categoria'),
+            subcategoria: document.getElementById('subcategoria'),
+            valor: document.getElementById('valor'),
+            data: document.getElementById('data'),
+            tabela: document.getElementById('tabelaCorpo'),
+            valSaldo: document.getElementById('valSaldo'),
+            valEntradas: document.getElementById('valEntradas'),
+            valSaidas: document.getElementById('valSaidas'),
+            themeToggle: document.getElementById('themeToggle'),
+            btnPDF: document.getElementById('btnExportPDF'),
+            btnExcel: document.getElementById('btnExportExcel')
+        };
+
+        loadStorage();
+        initTheme();
+
+        resetFormState();
+
+        el.tipo.addEventListener('change', handleTipoChange);
+        el.categoria.addEventListener('change', handleCategoriaChange);
+        el.form.addEventListener('submit', handleSubmit);
+        el.btnCancelEdit.addEventListener('click', resetFormState);
+        el.themeToggle.addEventListener('click', toggleTheme);
+        el.btnPDF.addEventListener('click', exportPDF);
+        el.btnExcel.addEventListener('click', exportExcel);
+
+        render();
+    };
+
+    return {
+        init,
+        edit: editLancamento,
+        delete: deleteLancamento,
+        toggleCard: toggleCardExpansion
+    };
+})();
+
+document.addEventListener('DOMContentLoaded', AppFinance.init);
+</script>
+</body>
+</html>
